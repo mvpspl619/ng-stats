@@ -21,7 +21,7 @@
   var lastWatchCount = getWatcherCount() || 0;
   var lastDigestLength = 0;
 
-  var $rootScope;
+  var rootScope;
 
   var digestIsHijacked = false;
 
@@ -32,13 +32,13 @@
   };
 
   // Hijack $digest to time it and update data on every digest.
-  function hijackDigest() {
+  function hijackDigest(scope) {
     if (digestIsHijacked) {
       return;
     }
     digestIsHijacked = true;
-    var $rootScope = getRootScope();
-    var scopePrototype = Object.getPrototypeOf($rootScope);
+    rootScope = scope;
+    var scopePrototype = Object.getPrototypeOf(rootScope);
     var oldDigest = scopePrototype.$digest;
     scopePrototype.$digest = function $digest() {
       var start = timerNow();
@@ -172,14 +172,14 @@
 
     // start everything
     shiftLeft();
-    if(!$rootScope.$$phase) {
-      $rootScope.$digest();
+    if(!rootScope.$$phase) {
+      rootScope.$digest();
     }
   }
 
-  angular.module('angularStats', []).directive('angularStats', function() {
+  angular.module('angularStats', []).directive('angularStats', ['$rootScope', function($rootScope) {
     'use strict';
-    hijackDigest();
+    hijackDigest($rootScope);
     return {
       scope: {
         digestLength: '@',
@@ -256,7 +256,7 @@
       }
       return parent;
     }
-  });
+  }]);
 
   return showAngularStats;
 
@@ -264,15 +264,15 @@
   // UTILITY FUNCTIONS
 
   function getRootScope() {
-    if ($rootScope) {
-      return $rootScope;
+    if (rootScope) {
+      return rootScope;
     }
     var scopeEl = document.querySelector('.ng-scope');
     if (!scopeEl) {
       return null;
     }
-    $rootScope = angular.element(scopeEl).scope().$root;
-    return $rootScope;
+    rootScope = angular.element(scopeEl).scope().$root;
+    return rootScope;
   }
 
   // Uses timeouts to ensure that this is only run every 300ms (it's a perf bottleneck)
